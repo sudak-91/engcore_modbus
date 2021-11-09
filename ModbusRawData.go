@@ -1,14 +1,17 @@
 package engcore_modbus
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 type ModbusRawData struct {
-	TransactionID   uint16
-	ProtocolID      uint16
-	Length          uint16
-	UnitID          uint8
-	FucnctionalCode uint8
-	Data            []byte
+	TransactionID   uint16 //Transaction ID
+	ProtocolID      uint16 // 0000
+	Length          uint16 // byte length  UnitID+FunctionalCodeData
+	UnitID          uint8  //SlaveAdress
+	FucnctionalCode uint8  //Functional Code
+	Data            []byte //DATA
 }
 
 func RawDataToModbusRawData(data []byte) (*ModbusRawData, error) {
@@ -20,4 +23,8 @@ func RawDataToModbusRawData(data []byte) (*ModbusRawData, error) {
 		FucnctionalCode: data[7],
 		Data:            data[8:],
 	}
+	if int(frame.Length) != len(frame.Data)+2 {
+		return nil, fmt.Errorf("Error ModbusTCp frame length")
+	}
+	return frame, nil
 }

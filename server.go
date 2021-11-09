@@ -6,20 +6,8 @@ import (
 	"net"
 )
 
-type ModbusServer struct {
-	ModbusRegisters ModbusMap
-}
-
-func NewModbusServer() *ModbusServer {
-	s := &ModbusServer{}
-	s.ModbusRegisters.Coil = make([]ModbusCoil, 65000)
-	s.ModbusRegisters.DiscreteInput = make([]ModbusCoil, 65000)
-	s.ModbusRegisters.HoldingRegister = make([]ModbusRegister, 65000)
-	s.ModbusRegisters.InputRegister = make([]ModbusRegister, 65000)
-	return s
-}
-
-func (s *ModbusServer) StartServer() {
+func StartServer() {
+	mbMap := NewModbusMap()
 	ls, err := net.ListenTCP("tcp4", &net.TCPAddr{
 		Port: 5002,
 		IP:   net.IPv4(192, 168, 56, 101),
@@ -42,6 +30,10 @@ func (s *ModbusServer) StartServer() {
 			log.Panic(err.Error())
 		}
 		buffer = buffer[:length]
+		frame, err := RawDataToModbusRawData(buffer)
+		if err != nil {
+			continue
+		}
 
 	}
 }
