@@ -39,7 +39,7 @@ func StartServer() {
 			continue
 		}
 		fmt.Println(frame)
-		result, err := mbMap.Action[frame.FucnctionalCode](frame.Data)
+		result, err := mbMap.Action[frame.FunctionalCode](frame.Data)
 		if err != nil {
 			continue
 		}
