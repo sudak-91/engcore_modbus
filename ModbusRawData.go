@@ -24,7 +24,18 @@ func RawDataToModbusRawData(data []byte) (*ModbusRawData, error) {
 		Data:           data[8:],
 	}
 	if int(frame.Length) != len(frame.Data)+2 {
-		return nil, fmt.Errorf("Error ModbusTCp frame length")
+		return nil, fmt.Errorf("error ModbusTCp frame length")
 	}
 	return frame, nil
+}
+func (m *ModbusRawData) ModbusFrametoByteSlice() ([]byte, error) {
+	data := make([]byte, m.Length+6)
+	binary.BigEndian.PutUint16(data[:2], m.TransactionID)
+	binary.BigEndian.PutUint16(data[2:4], m.ProtocolID)
+	binary.BigEndian.PutUint16(data[4:6], m.Length)
+
+	data[6] = m.UnitID
+	data[7] = m.FunctionalCode
+	copy(data[8:], m.Data)
+	return data, nil
 }

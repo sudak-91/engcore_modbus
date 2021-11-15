@@ -39,6 +39,7 @@ func TestRawDataToModbusRawData(t *testing.T) {
 		t.Log("Functional Code fail")
 		t.Fail()
 	}
+
 	t.Log(testresult.Data)
 	t.Log(rslt.Data)
 

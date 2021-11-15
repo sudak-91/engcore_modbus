@@ -1,8 +1,17 @@
 package main
 
-import "github.com/sudak-91/engcore_modbus"
+import (
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/sudak-91/engcore_modbus"
+)
 
 func main() {
 
-	engcore_modbus.StartServer()
+	go engcore_modbus.StartServer()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM)
+	<-quit
 }

@@ -3,6 +3,7 @@ package engcore_modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 )
 
 //Holding and Input Register
@@ -45,6 +46,7 @@ func NewModbusMap() *ModbusMap {
 //Return: data, error
 //Mosbuc Command 0x01
 func (m *ModbusMap) readCoilStatus(data []byte) ([]byte, error) {
+	log.Println("Read Coil")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	if length > 65535 {
@@ -71,6 +73,7 @@ func (m *ModbusMap) readCoilStatus(data []byte) ([]byte, error) {
 
 //Modbus 0x02
 func (m *ModbusMap) ReadInputStatus(data []byte) ([]byte, error) {
+	log.Println("Read Input Status")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	if length > 65535 {
@@ -96,6 +99,7 @@ func (m *ModbusMap) ReadInputStatus(data []byte) ([]byte, error) {
 
 //Modbus 0x03
 func (m *ModbusMap) ReadHoldingRegisters(data []byte) ([]byte, error) {
+	log.Println("Read Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	if length > 65535 {
@@ -113,6 +117,7 @@ func (m *ModbusMap) ReadHoldingRegisters(data []byte) ([]byte, error) {
 
 //Modbus 0x04
 func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
+	log.Println("Read Input Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	if length > 65535 {
@@ -122,7 +127,7 @@ func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
 	Result := make([]byte, byteCount+1)
 	Result[0] = byte(byteCount)
 	for i, value := range m.HoldingRegister[offset : length+offset] {
-		binary.BigEndian.PutUint16(Result[i*2:(i+1)*2], value.Value)
+		binary.BigEndian.PutUint16(Result[(i*2)+1:((i+1)*2)+1], value.Value)
 	}
 	return Result, nil
 
@@ -130,9 +135,10 @@ func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
 
 //Modbus (0x05) ForceSingleCoil
 func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
+	log.Println("Write Single Coil")
 	offset := GetOffset(data)
 	if len(data) < 2 {
-		return nil, fmt.Errorf("Not data")
+		return nil, fmt.Errorf("not data")
 	}
 	Result := make([]byte, 4)
 	binary.BigEndian.PutUint16(Result[:2], uint16(offset))
@@ -150,7 +156,7 @@ func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
 
 //Modbus (0x06) PresetSingleRegister
 func (m *ModbusMap) PresetSingleRegister(data []byte) ([]byte, error) {
-
+	log.Println("Write Single Holding Register")
 	var value uint16
 	length := GetOffset(data)
 	value = binary.BigEndian.Uint16(data[2:4])
@@ -169,6 +175,7 @@ func (m *ModbusMap) PresetSingleRegister(data []byte) ([]byte, error) {
  */
 
 func (m *ModbusMap) ForseMultipalCoil(data []byte) ([]byte, error) {
+	log.Println("Write MultiCoil")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	bytecount := GetByteCount(data)
@@ -190,6 +197,7 @@ func (m *ModbusMap) ForseMultipalCoil(data []byte) ([]byte, error) {
 
 //Modbus (0x10) (16) PresetMultipalRegister
 func (m *ModbusMap) PresetMultipalRegister(data []byte) ([]byte, error) {
+	log.Println("Write multi Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
 	bytecount := GetByteCount(data)
