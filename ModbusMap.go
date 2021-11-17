@@ -49,8 +49,12 @@ func (m *ModbusMap) readCoilStatus(data []byte) ([]byte, error) {
 	log.Println("Read Coil")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if length > 65535 {
-		return nil, fmt.Errorf("max coil count is 65535")
+	if offset+length > 65535 {
+
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
+	}
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 
 	resultLength := length / 8
@@ -76,10 +80,12 @@ func (m *ModbusMap) ReadInputStatus(data []byte) ([]byte, error) {
 	log.Println("Read Input Status")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if length > 65535 {
-		return nil, fmt.Errorf("max coil count is 65535")
+	if offset+length > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
 	}
-
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	}
 	resultLength := length / 8
 	if resultLength%8 != 0 {
 		resultLength++
@@ -102,8 +108,11 @@ func (m *ModbusMap) ReadHoldingRegisters(data []byte) ([]byte, error) {
 	log.Println("Read Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if length > 65535 {
-		return nil, fmt.Errorf("out of slice size")
+	if offset+length > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 	byteCount := length * 2
 	Result := make([]byte, byteCount+1)
@@ -120,12 +129,18 @@ func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
 	log.Println("Read Input Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if length > 65535 {
-		return nil, fmt.Errorf("out of slice size")
+	if offset+length > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 	byteCount := length * 2
 	Result := make([]byte, byteCount+1)
 	Result[0] = byte(byteCount)
+	if offset > length+offset {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	}
 	for i, value := range m.HoldingRegister[offset : length+offset] {
 		binary.BigEndian.PutUint16(Result[(i*2)+1:((i+1)*2)+1], value.Value)
 	}
@@ -137,8 +152,11 @@ func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
 func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
 	log.Println("Write Single Coil")
 	offset := GetOffset(data)
+	if offset > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
 	if len(data) < 2 {
-		return nil, fmt.Errorf("not data")
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 	Result := make([]byte, 4)
 	binary.BigEndian.PutUint16(Result[:2], uint16(offset))
@@ -146,10 +164,12 @@ func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
 		m.Coil[offset].Value = 1
 		Result[2] = 0xff
 		Result[3] = 0x00
-	} else {
+	} else if data[0] == 0x00 {
 		m.Coil[offset].Value = 0
 		Result[2] = 0x00
 		Result[3] = 0x00
+	} else {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal coil data")
 	}
 	return Result, nil
 }
@@ -158,13 +178,16 @@ func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
 func (m *ModbusMap) PresetSingleRegister(data []byte) ([]byte, error) {
 	log.Println("Write Single Holding Register")
 	var value uint16
-	length := GetOffset(data)
+	offset := GetOffset(data)
+	if offset > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
 	value = binary.BigEndian.Uint16(data[2:4])
 
-	m.HoldingRegister[length].Value = value
+	m.HoldingRegister[offset].Value = value
 	newvalue := make([]byte, 4)
-	binary.BigEndian.PutUint16(newvalue[:2], uint16(length))
-	binary.BigEndian.PutUint16(newvalue[2:], m.HoldingRegister[length].Value)
+	binary.BigEndian.PutUint16(newvalue[:2], uint16(offset))
+	binary.BigEndian.PutUint16(newvalue[2:], m.HoldingRegister[offset].Value)
 	return newvalue, nil
 
 }
@@ -178,13 +201,23 @@ func (m *ModbusMap) ForseMultipalCoil(data []byte) ([]byte, error) {
 	log.Println("Write MultiCoil")
 	offset := GetOffset(data)
 	length := GetLength(data)
+	if offset+length > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	}
 	bytecount := GetByteCount(data)
+	if bytecount == 0 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("byte count equl 0")
+	}
 	var i, j uint16
 	for i = 0; i < bytecount; i++ {
 		for j = 0; j < 8; j++ {
-			if (((data[5+i]) >> j) % 2) == 1 {
+			bitOffset := ((data[5+i]) >> j) % 2
+			if bitOffset == 1 {
 				m.Coil[offset+(i*8)+j].Value = 1
-			} else {
+			} else if bitOffset == 0 {
 				m.Coil[offset+(i*8)+j].Value = 0
 			}
 		}
@@ -200,6 +233,12 @@ func (m *ModbusMap) PresetMultipalRegister(data []byte) ([]byte, error) {
 	log.Println("Write multi Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
+	if offset+length > 65535 {
+		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
+	}
+	if length == 0 {
+		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	}
 	bytecount := GetByteCount(data)
 	var i uint16
 	for i = 0; i < length; i++ {

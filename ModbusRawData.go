@@ -24,7 +24,7 @@ func RawDataToModbusRawData(data []byte) (*ModbusRawData, error) {
 		Data:           data[8:],
 	}
 	if int(frame.Length) != len(frame.Data)+2 {
-		return nil, fmt.Errorf("error ModbusTCp frame length")
+		return nil, fmt.Errorf("error ModbusTCP frame length")
 	}
 	return frame, nil
 }

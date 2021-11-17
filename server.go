@@ -57,19 +57,35 @@ func handlerClient(conn net.Conn, mbMap *ModbusMap) {
 		frame, err := RawDataToModbusRawData(buffer)
 		if err != nil {
 			log.Println(err.Error())
-			break
+			continue
 		}
 		fmt.Println("Request frame:", *frame)
+
+		if frame.FunctionalCode > 17 {
+			result, err := errorResponce(frame)
+
+			if err != nil {
+				log.Println(err.Error())
+				continue
+			}
+
+			lenrcv, err := conn.Write(result)
+			if err != nil || lenrcv <= 0 {
+				log.Println("error send recive with illegal functional code error", err.Error())
+				continue
+			}
+			continue
+		}
 
 		result, err := mbMap.Action[frame.FunctionalCode](frame.Data)
 		log.Println("Result:", result)
 		if err != nil {
 			log.Println(err.Error())
-			break
+			frame.FunctionalCode = frame.FunctionalCode + 128
 		}
 
 		responceframe, err := createResponce(frame, result)
-		log.Println("Responceframe:", responceframe)
+		log.Println("Responce Frame:", responceframe)
 		butesresult, err := responceframe.ModbusFrametoByteSlice()
 
 		log.Println(butesresult)
@@ -95,4 +111,22 @@ func createResponce(request *ModbusRawData, data []byte) (*ModbusRawData, error)
 	responce.FunctionalCode = request.FunctionalCode
 	responce.Data = data
 	return responce, nil
+}
+
+func errorResponce(request *ModbusRawData) ([]byte, error) {
+	request.FunctionalCode = request.FunctionalCode + 128
+	responce, err := createResponce(request, []byte{ILLEGAL_FUNCTION})
+	if err != nil {
+		log.Println("create pesponce err")
+		return nil, err
+	}
+	log.Println("Responceframe:", responce)
+	result, err := responce.ModbusFrametoByteSlice()
+	if err != nil {
+		log.Println("error convert modbus framme to byte slice")
+		return nil, err
+	}
+	log.Println("Responce byte slice:", result)
+	return result, nil
+
 }
