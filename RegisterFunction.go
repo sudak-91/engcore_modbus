@@ -65,7 +65,8 @@ func readInputStatus(data []byte, m *ModbusMap) ([]byte, error) {
 	}
 	return Result, nil
 }
-HoldingRegister
+
+//HoldingRegister
 //Modbus 0x03
 func readHoldingRegisters(data []byte, m *ModbusMap) ([]byte, error) {
 	log.Println("Read Holding Register")

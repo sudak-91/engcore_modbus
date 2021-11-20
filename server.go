@@ -96,9 +96,10 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			}
 			continue
 		}
-
+		//@TODO add mutex
 		result, err := m.action[frame.FunctionalCode](frame.Data, m.mbMap)
 		log.Println("Result:", result)
+		//Unlock
 		if err != nil {
 			log.Println(err.Error())
 			frame.FunctionalCode = frame.FunctionalCode + 128
