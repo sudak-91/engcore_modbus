@@ -6,15 +6,38 @@ import (
 	"net"
 )
 
-func StartServer(ip string, port int, mbMap *ModbusMap) {
-	ipv4Adr, _, netparserr := net.ParseCIDR(ip)
+type ModbusServer struct {
+	ip     net.IP
+	port   int
+	mbMap  *ModbusMap
+	action [17]func([]byte, *ModbusMap) ([]byte, error)
+}
+
+func NewModbusServer(ip string, port int, mMap *ModbusMap) *ModbusServer {
+	m := &ModbusServer{}
+	ipV4Adr, _, netparserr := net.ParseCIDR(ip)
 	if netparserr != nil {
 		log.Fatalln("invalid ip adress")
 	}
+	m.ip = ipV4Adr
+	m.port = port
+	m.mbMap = mMap
+	m.action[1] = readCoilStatus
+	m.action[2] = readInputStatus
+	m.action[3] = readHoldingRegisters
+	m.action[4] = readInputRegister
+	m.action[5] = forseSingleCoil
+	m.action[6] = presetSingleRegister
+	m.action[15] = forseMultipalCoil
+	m.action[16] = presetMultipalRegister
+	return m
+}
+
+func (m *ModbusServer) StartServer() {
 
 	ls, err := net.ListenTCP("tcp4", &net.TCPAddr{
-		Port: port,
-		IP:   ipv4Adr,
+		Port: m.port,
+		IP:   m.ip,
 	})
 
 	if err != nil {
@@ -31,13 +54,13 @@ func StartServer(ip string, port int, mbMap *ModbusMap) {
 		}
 
 		//Client
-		go handlerClient(conn, mbMap)
+		go m.handlerClient(conn)
 
 	}
 
 }
 
-func handlerClient(conn net.Conn, mbMap *ModbusMap) {
+func (m *ModbusServer) handlerClient(conn net.Conn) {
 	defer conn.Close()
 
 	fmt.Println(conn.RemoteAddr())
@@ -74,7 +97,7 @@ func handlerClient(conn net.Conn, mbMap *ModbusMap) {
 			continue
 		}
 
-		result, err := mbMap.Action[frame.FunctionalCode](frame.Data)
+		result, err := m.action[frame.FunctionalCode](frame.Data, m.mbMap)
 		log.Println("Result:", result)
 		if err != nil {
 			log.Println(err.Error())
