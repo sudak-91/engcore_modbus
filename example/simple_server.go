@@ -10,7 +10,8 @@ import (
 
 func main() {
 
-	go engcore_modbus.StartServer()
+	mbMap := engcore_modbus.NewModbusMap()
+	go engcore_modbus.StartServer("0.0.0.0/24", 5002, mbMap)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM)
 	<-quit

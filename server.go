@@ -4,25 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
-func StartServer() {
-
-	mbMap := NewModbusMap()
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+func StartServer(ip string, port int, mbMap *ModbusMap) {
+	ipv4Adr, _, netparserr := net.ParseCIDR(ip)
+	if netparserr != nil {
+		log.Fatalln("invalid ip adress")
+	}
 
 	ls, err := net.ListenTCP("tcp4", &net.TCPAddr{
-		Port: 5002,
-		IP:   net.IPv4(192, 168, 56, 101),
+		Port: port,
+		IP:   ipv4Adr,
 	})
 
 	if err != nil {
 		log.Println(err.Error())
-		return
 	}
 	fmt.Println("server start", ls.Addr())
 
@@ -33,6 +29,7 @@ func StartServer() {
 		if err != nil {
 			log.Panic(err.Error())
 		}
+
 		//Client
 		go handlerClient(conn, mbMap)
 

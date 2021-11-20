@@ -33,13 +33,13 @@ func NewModbusMap() *ModbusMap {
 	m.InputRegister = make([]ModbusRegister, 65535)
 	m.HoldingRegister = make([]ModbusRegister, 65535)
 	m.Action[1] = m.readCoilStatus
-	m.Action[2] = m.ReadInputStatus
-	m.Action[3] = m.ReadHoldingRegisters
-	m.Action[4] = m.ReadInputRegister
-	m.Action[5] = m.ForseSingleCoil
-	m.Action[6] = m.PresetSingleRegister
-	m.Action[15] = m.ForseMultipalCoil
-	m.Action[16] = m.PresetMultipalRegister
+	m.Action[2] = m.readInputStatus
+	m.Action[3] = m.readHoldingRegisters
+	m.Action[4] = m.readInputRegister
+	m.Action[5] = m.forseSingleCoil
+	m.Action[6] = m.presetSingleRegister
+	m.Action[15] = m.forseMultipalCoil
+	m.Action[16] = m.presetMultipalRegister
 	return m
 }
 
@@ -76,7 +76,7 @@ func (m *ModbusMap) readCoilStatus(data []byte) ([]byte, error) {
 }
 
 //Modbus 0x02
-func (m *ModbusMap) ReadInputStatus(data []byte) ([]byte, error) {
+func (m *ModbusMap) readInputStatus(data []byte) ([]byte, error) {
 	log.Println("Read Input Status")
 	offset := GetOffset(data)
 	length := GetLength(data)
@@ -104,7 +104,7 @@ func (m *ModbusMap) ReadInputStatus(data []byte) ([]byte, error) {
 }
 
 //Modbus 0x03
-func (m *ModbusMap) ReadHoldingRegisters(data []byte) ([]byte, error) {
+func (m *ModbusMap) readHoldingRegisters(data []byte) ([]byte, error) {
 	log.Println("Read Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
@@ -125,7 +125,7 @@ func (m *ModbusMap) ReadHoldingRegisters(data []byte) ([]byte, error) {
 }
 
 //Modbus 0x04
-func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
+func (m *ModbusMap) readInputRegister(data []byte) ([]byte, error) {
 	log.Println("Read Input Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
@@ -149,7 +149,7 @@ func (m *ModbusMap) ReadInputRegister(data []byte) ([]byte, error) {
 }
 
 //Modbus (0x05) ForceSingleCoil
-func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
+func (m *ModbusMap) forseSingleCoil(data []byte) ([]byte, error) {
 	log.Println("Write Single Coil")
 	offset := GetOffset(data)
 	if offset > 65535 {
@@ -174,8 +174,8 @@ func (m *ModbusMap) ForseSingleCoil(data []byte) ([]byte, error) {
 	return Result, nil
 }
 
-//Modbus (0x06) PresetSingleRegister
-func (m *ModbusMap) PresetSingleRegister(data []byte) ([]byte, error) {
+//Modbus (0x06) presetSingleRegister
+func (m *ModbusMap) presetSingleRegister(data []byte) ([]byte, error) {
 	log.Println("Write Single Holding Register")
 	var value uint16
 	offset := GetOffset(data)
@@ -197,7 +197,7 @@ func (m *ModbusMap) PresetSingleRegister(data []byte) ([]byte, error) {
 
  */
 
-func (m *ModbusMap) ForseMultipalCoil(data []byte) ([]byte, error) {
+func (m *ModbusMap) forseMultipalCoil(data []byte) ([]byte, error) {
 	log.Println("Write MultiCoil")
 	offset := GetOffset(data)
 	length := GetLength(data)
@@ -228,8 +228,8 @@ func (m *ModbusMap) ForseMultipalCoil(data []byte) ([]byte, error) {
 	return result, nil
 }
 
-//Modbus (0x10) (16) PresetMultipalRegister
-func (m *ModbusMap) PresetMultipalRegister(data []byte) ([]byte, error) {
+//Modbus (0x10) (16) presetMultipalRegister
+func (m *ModbusMap) presetMultipalRegister(data []byte) ([]byte, error) {
 	log.Println("Write multi Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
