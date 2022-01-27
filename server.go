@@ -9,11 +9,11 @@ import (
 type ModbusServer struct {
 	ip     net.IP
 	port   int
-	mbMap  *ModbusMap
-	action [17]func([]byte, *ModbusMap) ([]byte, error)
+	mbMap  *ModbusRegisters
+	action [17]func([]byte, *ModbusRegisters) ([]byte, error)
 }
 
-func NewModbusServer(ip string, port int, mMap *ModbusMap) *ModbusServer {
+func NewModbusServer(ip string, port int, mMap *ModbusRegisters) *ModbusServer {
 	m := &ModbusServer{}
 	ipV4Adr, _, netparserr := net.ParseCIDR(ip)
 	if netparserr != nil {
