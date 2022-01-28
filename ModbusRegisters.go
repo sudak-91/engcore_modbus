@@ -29,12 +29,12 @@ type ModbusRegisters struct {
 	holdingRegister      []ModbusRegister
 }
 
-func NewModbusRegisters(RegisterSize ...int) (error, *ModbusRegisters) {
+func NewModbusRegisters(RegisterSize ...int) (*ModbusRegisters, error) {
 	m := &ModbusRegisters{}
 	size := len(RegisterSize)
 	RegistersCount := [4]int{65535, 65535, 65535, 65535}
 	if size > 4 {
-		return fmt.Errorf("register size must have 4 or less elements"), nil
+		return nil, fmt.Errorf("register size must have 4 or less elements")
 	}
 	for k, v := range RegisterSize {
 		RegistersCount[k] = v
@@ -44,44 +44,60 @@ func NewModbusRegisters(RegisterSize ...int) (error, *ModbusRegisters) {
 	m.inputRegister = make([]ModbusRegister, RegistersCount[2])
 	m.holdingRegister = make([]ModbusRegister, RegistersCount[3])
 	log.Printf("Modbus registers was initializied. Coil's dimensions = %v, Discret input's dimension = %v, Input registers dimension=%v, Holding registers dimension=%v", RegistersCount[0], RegistersCount[1], RegistersCount[2], RegistersCount[3])
-	return nil, m
+	return m, nil
 }
 
 //API
-func (m *ModbusRegisters) GetCoil(offset int) (ModbusCoil, error) {
+func (m *ModbusRegisters) GetCoil(offset int, length int) ([]ModbusCoil, error) {
 	m.coilMutex.Lock()
 	defer m.coilMutex.Unlock()
-	if offset > len(m.coil) {
-		return ModbusCoil{}, fmt.Errorf("coil outside")
+	if length == 0 {
+		return nil, fmt.Errorf("zero length")
 	}
-	return m.coil[offset], nil
+	if offset+length > len(m.coil) {
+		return nil, fmt.Errorf("coil outside")
+	}
+	return m.coil[offset : offset+length], nil
 }
-func (m *ModbusRegisters) SetCoil(offset int, value byte) error {
+
+func (m *ModbusRegisters) SetCoil(offset int, value []byte) error {
 	m.coilMutex.Lock()
 	defer m.coilMutex.Unlock()
-	if value > 1 || offset > len(m.coil) {
-		return fmt.Errorf("illegal input data")
+	if offset+len(value) > len(m.coil) {
+		return fmt.Errorf("length over size")
 	}
-	m.coil[offset].Value = value
+	for k, v := range value {
+		if v > 1 {
+			return fmt.Errorf("illegal data")
+		}
+		m.coil[offset+k].Value = v
+
+	}
 	return nil
 }
-func (m *ModbusRegisters) GetDiscreteInput(offset int) (ModbusCoil, error) {
+
+func (m *ModbusRegisters) GetDiscreteInput(offset int, length int) ([]ModbusCoil, error) {
 	m.discreteMutex.Lock()
 	defer m.discreteMutex.Unlock()
-	if offset > len(m.discreteInput) {
-		return ModbusCoil{}, fmt.Errorf("discrete input outside")
+	if offset+length > len(m.discreteInput) {
+		return nil, fmt.Errorf("discrete input outside")
 	}
-	return m.discreteInput[offset], nil
+	return m.discreteInput[offset : offset+length], nil
 }
-func (m *ModbusRegisters) SetDiscreteInput(offset int, value byte) error {
+
+func (m *ModbusRegisters) SetDiscreteInput(offset int, value []byte) error {
 	m.discreteMutex.Lock()
 	defer m.discreteMutex.Unlock()
-	if offset > len(m.discreteInput) || value > 1 {
+	if offset+len(value) > len(m.discreteInput) || value > 1 {
 		return fmt.Errorf("discrete input outside")
 	}
-	m.discreteInput[offset].Value = value
+	for k, v := range value {
+		m.discreteInput[offset+k].Value = v
+	}
+
 	return nil
 }
+
 func (m *ModbusRegisters) GetInputRegister(offset int) (ModbusRegister, error) {
 	m.inputRegisterMutex.Lock()
 	defer m.inputRegisterMutex.Unlock()
@@ -144,4 +160,12 @@ func (m *ModbusRegisters) SetHoldingRegisterName(name string, offset int) error 
 	}
 	m.holdingRegister[offset].Description = name
 	return nil
+}
+
+func (m *ModbusRegisters) GetCoilLength() int {
+	return len(m.coil)
+}
+
+func (m *ModbusRegisters) GetDiscreteInputLength() int {
+	return len(m.discreteInput)
 }

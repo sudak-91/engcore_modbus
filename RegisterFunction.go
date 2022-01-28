@@ -6,36 +6,30 @@ import (
 	"log"
 )
 
-//Return: data, error
-//Mosbuc Command 0x01
+//Modbuc Command 0x01
 func readCoilStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Coil")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > uint16(len(m.coil)) {
+	CoilResult, err := m.GetCoil(int(offset), int(length)) // slice for length and result
+	if err != nil {
 
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
+		return []byte{ILLEGAL_DATA_ADDRESS}, err
 	}
-	if length == 0 {
-		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
-	}
-
 	resultLength := length / 8
 	if resultLength%8 != 0 {
 		resultLength++
 	}
-	Result := make([]byte, resultLength+1) // slice for length and result
+	Result := make([]byte, resultLength+1)
 	Result[0] = byte(resultLength)
 
-	for k, value := range m.coil[offset : offset+length] {
+	for k, value := range CoilResult {
 		if value.Value != 0 {
 			shift := uint(k) % 8
 			Result[1+k/8] = byte(1 << shift)
 		}
-
 	}
 	return Result, nil
-
 }
 
 //Modbus 0x02
