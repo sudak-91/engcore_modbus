@@ -60,7 +60,7 @@ func (m *ModbusRegisters) GetCoil(offset int, length int) ([]ModbusCoil, error) 
 	return m.coil[offset : offset+length], nil
 }
 
-func (m *ModbusRegisters) SetCoil(offset int, value []byte) error {
+func (m *ModbusRegisters) SetCoil(offset int, value []int) error {
 	m.coilMutex.Lock()
 	defer m.coilMutex.Unlock()
 	if offset+len(value) > len(m.coil) {
@@ -70,7 +70,7 @@ func (m *ModbusRegisters) SetCoil(offset int, value []byte) error {
 		if v > 1 {
 			return fmt.Errorf("illegal data")
 		}
-		m.coil[offset+k].Value = v
+		m.coil[offset+k].Value = byte(v)
 
 	}
 	return nil
@@ -85,51 +85,61 @@ func (m *ModbusRegisters) GetDiscreteInput(offset int, length int) ([]ModbusCoil
 	return m.discreteInput[offset : offset+length], nil
 }
 
-func (m *ModbusRegisters) SetDiscreteInput(offset int, value []byte) error {
+func (m *ModbusRegisters) SetDiscreteInput(offset int, value []int) error {
 	m.discreteMutex.Lock()
 	defer m.discreteMutex.Unlock()
-	if offset+len(value) > len(m.discreteInput) || value > 1 {
+	if offset+len(value) > len(m.discreteInput) {
 		return fmt.Errorf("discrete input outside")
 	}
 	for k, v := range value {
-		m.discreteInput[offset+k].Value = v
+		if v > 1 {
+			return fmt.Errorf("illegal data")
+		}
+		m.discreteInput[offset+k].Value = byte(v)
 	}
 
 	return nil
 }
 
-func (m *ModbusRegisters) GetInputRegister(offset int) (ModbusRegister, error) {
+func (m *ModbusRegisters) GetInputRegister(offset int, length int) ([]ModbusRegister, error) {
 	m.inputRegisterMutex.Lock()
 	defer m.inputRegisterMutex.Unlock()
-	if offset > len(m.inputRegister) {
-		return ModbusRegister{}, fmt.Errorf("input register outside")
+	if offset+length > len(m.inputRegister) {
+		return nil, fmt.Errorf("input register outside")
 	}
-	return m.inputRegister[offset], nil
+	return m.inputRegister[offset : offset+length], nil
 }
-func (m *ModbusRegisters) SetInputRegister(offset int, value uint16) error {
+
+func (m *ModbusRegisters) SetInputRegister(offset int, value []uint16) error {
 	m.inputRegisterMutex.Lock()
 	defer m.inputRegisterMutex.Unlock()
-	if offset > len(m.inputRegister) {
+	if offset+len(value) > len(m.inputRegister) {
 		return fmt.Errorf("input register outside")
 	}
-	m.inputRegister[offset].Value = value
+	for k, v := range value {
+		m.inputRegister[offset+k].Value = v
+	}
 	return nil
 }
-func (m *ModbusRegisters) GetHoldingRegister(offset int) (ModbusRegister, error) {
+
+func (m *ModbusRegisters) GetHoldingRegister(offset int, length int) ([]ModbusRegister, error) {
 	m.holdingRegisterMutex.Lock()
 	defer m.holdingRegisterMutex.Unlock()
-	if offset > len(m.holdingRegister) {
-		return ModbusRegister{}, fmt.Errorf("holding register outside")
+	if offset+length > len(m.holdingRegister) {
+		return nil, fmt.Errorf("holding register outside")
 	}
-	return m.holdingRegister[offset], nil
+	return m.holdingRegister[offset : offset+length], nil
 }
-func (m *ModbusRegisters) SetHoldingRegister(offset int, value uint16) error {
+
+func (m *ModbusRegisters) SetHoldingRegister(offset int, value []uint16) error {
 	m.holdingRegisterMutex.Lock()
 	defer m.holdingRegisterMutex.Unlock()
-	if offset > len(m.holdingRegister) {
+	if offset+len(value) > len(m.holdingRegister) {
 		return fmt.Errorf("holdin register outside")
 	}
-	m.holdingRegister[offset].Value = uint16(value)
+	for k, v := range value {
+		m.holdingRegister[offset+k].Value = v
+	}
 	return nil
 }
 

@@ -26,7 +26,7 @@ func readCoilStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	for k, value := range CoilResult {
 		if value.Value != 0 {
 			shift := uint(k) % 8
-			Result[1+k/8] = byte(1 << shift)
+			Result[1+k/8] = Result[1+k/8] | byte(1<<shift)
 		}
 	}
 	return Result, nil
@@ -151,9 +151,6 @@ func presetSingleRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 }
 
 //Modbus (0x0F)(15) ForseMultipalCoil
-/*
-
- */
 
 func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write MultiCoil")

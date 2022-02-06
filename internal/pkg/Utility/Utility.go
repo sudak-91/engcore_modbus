@@ -1,5 +1,7 @@
 package Utility
 
+import "encoding/binary"
+
 func OneCoilConvertIntToByteSlice(Value int) []byte {
 	ByteValue := []byte{0x00, 0x00}
 	if Value == 1 {
@@ -17,12 +19,31 @@ func CoilsConverterSliceValueToUint(Value []int) (result []byte, size int) {
 	for k, v := range Value {
 		var offset int
 		offset = k
-		if k > 8 {
-			offset = k - 8
-		}
+
+		offset = k % 8
+
 		if v == 1 {
 			result[k/8] = result[k/8] | byte(1<<offset)
 		}
 	}
 	return
+}
+
+func ConvertOffsetFromIntToByteSlice(offset int) []byte {
+	bResult := make([]byte, 2)
+	binary.BigEndian.PutUint16(bResult, uint16(offset))
+	return bResult
+}
+
+func ConvertLengthfromIntToByteSlice(length int) []byte {
+	bResult := make([]byte, 2)
+	binary.BigEndian.PutUint16(bResult, uint16(length))
+	return bResult
+}
+
+func CreateDataBlockFromReadCoilStatus(offset, length int) []byte {
+	var bResult []byte
+	bResult = append(bResult, ConvertOffsetFromIntToByteSlice(offset)...)
+	bResult = append(bResult, ConvertLengthfromIntToByteSlice(length)...)
+	return bResult
 }

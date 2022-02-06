@@ -2,58 +2,18 @@ package main
 
 import (
 	"fmt"
-	"sync"
-	"time"
+	"internal/Mock"
+
+	"github.com/sudak-91/engcore_modbus"
 )
 
-type teststr struct {
-	mu sync.RWMutex
-	k  int
-	r  int
-}
-
-func (t *teststr) ReadK() int {
-
-	fmt.Println("ReadK is locked")
-	defer func() {
-		fmt.Println("ReadK is unlocked")
-
-	}()
-	return t.k
-
-}
-func (t *teststr) Writek(j int) {
-
-	fmt.Println("Writek is locked")
-	defer func() {
-		fmt.Println("Writek is unlocked", j)
-
-	}()
-	t.k += j
-}
-
 func main() {
-	tst := new(teststr)
-	for i := 0; i < 6; i++ {
-		fmt.Println(i)
-		go func(t *teststr) {
-			t.mu.Lock()
-			t.Writek(i)
-			time.Sleep(time.Second * 3)
-			t.mu.Unlock()
-		}(tst)
-		go func(t *teststr) {
-			t.mu.Lock()
-			defer t.mu.Unlock()
-			t.r = i + 5
-			fmt.Println("R:", t.r)
-		}(tst)
-		go func(t *teststr) {
-			t.mu.Lock()
-			defer t.mu.Unlock()
-			fmt.Println("ReadK:", t.ReadK())
-		}(tst)
-		time.Sleep(time.Second * 1)
-	}
+	frame := Mock.GenerateWriteCoilsRequest()
+	fmt.Println(frame)
+	frame2 := Mock.GenerateWriteRegisterRequest()
+	fmt.Println(frame2)
+	k, _ := engcore_modbus.RawDataToModbusRawData(frame2)
+	fmt.Println(k.TransactionID)
+	fmt.Println(k.Length)
 
 }
