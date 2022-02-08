@@ -70,6 +70,24 @@ func GenerateWriteCoilsRequest() []byte {
 	return frame
 }
 
+func GenerateWriteSingleCoil(offset int, value int) []byte {
+	var frame []byte
+	_, bresult := GeneratateTransactionIDMock()
+	frame = append(frame, bresult...)
+	frame = append(frame, 0, 0)
+	data := Utility.OneCoilConvertIntToByteSlice(value)
+	unitId := GenerateUnitIDMock()
+	funcCode := 5
+	_, bDataLength := CalcLengthForMockModbusRawData(len(data) + 2)
+	frame = append(frame, bDataLength...)
+	frame = append(frame, unitId, byte(funcCode))
+	boffset := make([]byte, 2)
+	binary.BigEndian.PutUint16(boffset, uint16(offset))
+	frame = append(frame, boffset...)
+	frame = append(frame, data...)
+	return frame
+}
+
 func GenerateReadCoilRequest(RegisterCount, functionalCode int) []byte {
 	var frame []byte
 	_, bresult := GeneratateTransactionIDMock()

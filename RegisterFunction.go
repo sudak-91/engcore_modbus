@@ -116,11 +116,11 @@ func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	}
 	Result := make([]byte, 4)
 	binary.BigEndian.PutUint16(Result[:2], uint16(offset))
-	if data[0] == 0xff {
+	if data[2] == 0xff {
 		m.coil[offset].Value = 1
 		Result[2] = 0xff
 		Result[3] = 0x00
-	} else if data[0] == 0x00 {
+	} else if data[2] == 0x00 {
 		m.coil[offset].Value = 0
 		Result[2] = 0x00
 		Result[3] = 0x00

@@ -106,3 +106,27 @@ func TestReadInputRegisters(t *testing.T) {
 	}
 	t.Log("is equal")
 }
+
+func TestForceSingleCoil(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(10, 10, 10, 10)
+	ModbusBytes := Mock.GenerateWriteSingleCoil(2, 1)
+	t.Logf("Generator post data: %v\n", ModbusBytes)
+	ModbusFrame, _ := RawDataToModbusRawData(ModbusBytes)
+	t.Logf("ModbusData is: %v\n", ModbusFrame.Data[2])
+	Testrslt, err := forseSingleCoil(ModbusFrame.Data, ModbusRegisters)
+	if err != nil {
+		t.Fatal()
+	}
+	t.Logf("result force single coil is %v", Testrslt)
+	rslt, _ := ModbusRegisters.GetCoil(2, 1)
+	byterslt := Utility.OneCoilConvertIntToByteSlice(int(rslt[0].Value))
+	if rslt[0].Value == 0 {
+		t.Fail()
+		return
+	}
+	if !bytes.Equal(byterslt, Testrslt[2:]) {
+		t.Fail()
+		return
+	}
+
+}
