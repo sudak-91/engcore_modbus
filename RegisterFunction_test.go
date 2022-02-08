@@ -17,7 +17,7 @@ func TestReadCoilStatus(t *testing.T) {
 		t.Log(v.Value)
 	}
 	//@TODO:
-	ModbusRequest := Mock.GenerateReadCoilRequest(10)
+	ModbusRequest := Mock.GenerateReadCoilRequest(10, 1)
 	t.Logf("ReadCoilRequest was generate: %v\n", ModbusRequest)
 	ModbusFrame, _ := RawDataToModbusRawData(ModbusRequest)
 	t.Logf("Modbus frame is %v", ModbusFrame)
@@ -35,4 +35,74 @@ func TestReadCoilStatus(t *testing.T) {
 	}
 	t.Log("is equal")
 
+}
+
+func TestReadInputStatus(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(20, 20, 20, 20)
+	CoilsData := Mock.GenerateCoilMockValues(10)
+	t.Logf("coils data was generate: %v\n", CoilsData)
+	_ = ModbusRegisters.SetDiscreteInput(0, CoilsData)
+
+	ModbusRequest := Mock.GenerateReadCoilRequest(10, 2)
+	t.Logf("ReadCoilRequest was generate: %v\n", ModbusRequest)
+	ModbusFrame, _ := RawDataToModbusRawData(ModbusRequest)
+	t.Logf("Modbus frame is %v", ModbusFrame)
+	t.Logf("Modbus frame Data is %v\n", ModbusFrame.Data)
+	TestfunctionResult, err := readInputStatus(ModbusFrame.Data, ModbusRegisters)
+	t.Logf("Read coil status result is %v\n", TestfunctionResult)
+	if err != nil {
+		t.Fatal()
+	}
+	byteCoilsData, _ := Utility.CoilsConverterSliceValueToUint(CoilsData)
+	t.Logf("Coil data to byte slice is %v\n", byteCoilsData)
+	if !bytes.Equal(TestfunctionResult[1:], byteCoilsData) {
+		t.Fatal("Not eqal")
+	}
+	t.Log("is equal")
+
+}
+func TestReadHoldingRegisters(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(20, 20, 20, 20)
+	RegistersData, _ := Mock.GenerateRegistersMock(10, 13456)
+	t.Logf("coils data was generate: %v\n", RegistersData)
+	_ = ModbusRegisters.SetHoldingRegister(0, RegistersData)
+	ModbusRequest := Mock.GenerateReadRegisters(10, 3)
+	ModbusFrame, _ := RawDataToModbusRawData(ModbusRequest)
+	t.Logf("Modbus frame is %v", ModbusFrame)
+	t.Logf("Modbus frame Data is %v\n", ModbusFrame.Data)
+	TestfunctionalResult, err := readHoldingRegisters(ModbusFrame.Data, ModbusRegisters)
+	t.Logf("Read coil status result is %v\n", TestfunctionalResult)
+	if err != nil {
+		t.Fatal()
+	}
+	bData := Utility.ConvertUintSliceToByteSlice(RegistersData)
+	t.Logf("Registers data to byte slice is %v\n", bData)
+	t.Logf("Registers data to byte slice is %v\n", TestfunctionalResult[1:])
+	if !bytes.Equal(TestfunctionalResult[1:], bData) {
+		t.Fatal("Not eqal")
+	}
+	t.Log("is equal")
+}
+
+func TestReadInputRegisters(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(20, 20, 20, 20)
+	RegistersData, _ := Mock.GenerateRegistersMock(10, 13456)
+	t.Logf("coils data was generate: %v\n", RegistersData)
+	_ = ModbusRegisters.SetInputRegister(0, RegistersData)
+	ModbusRequest := Mock.GenerateReadRegisters(10, 4)
+	ModbusFrame, _ := RawDataToModbusRawData(ModbusRequest)
+	t.Logf("Modbus frame is %v", ModbusFrame)
+	t.Logf("Modbus frame Data is %v\n", ModbusFrame.Data)
+	TestfunctionalResult, err := readInputRegister(ModbusFrame.Data, ModbusRegisters)
+	t.Logf("Read coil status result is %v\n", TestfunctionalResult)
+	if err != nil {
+		t.Fatal()
+	}
+	bData := Utility.ConvertUintSliceToByteSlice(RegistersData)
+	t.Logf("Registers data to byte slice is %v\n", bData)
+	t.Logf("Registers data to byte slice is %v\n", TestfunctionalResult[1:])
+	if !bytes.Equal(TestfunctionalResult[1:], bData) {
+		t.Fatal("Not eqal")
+	}
+	t.Log("is equal")
 }

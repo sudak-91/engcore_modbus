@@ -37,12 +37,11 @@ func readInputStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Input Status")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
-	}
-	if length == 0 {
+	InputResult, err := m.GetDiscreteInput(int(offset), int(length))
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
+
 	resultLength := length / 8
 	if resultLength%8 != 0 {
 		resultLength++
@@ -50,10 +49,10 @@ func readInputStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	Result := make([]byte, resultLength+1) // slice for length and result
 	Result[0] = byte(resultLength)
 
-	for k, value := range m.inputRegister[offset : offset+length] {
+	for k, value := range InputResult {
 		if value.Value != 0 {
 			shift := uint(k) % 8
-			Result[1+k/8] = byte(1 << shift)
+			Result[1+k/8] = Result[1+k/8] | byte(1<<shift)
 		}
 
 	}
@@ -66,18 +65,20 @@ func readHoldingRegisters(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
-	}
-	if length == 0 {
+	HoldingRegistersResult, err := m.GetHoldingRegister(int(offset), int(length))
+
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
+
 	byteCount := length * 2
-	Result := make([]byte, byteCount+1)
-	Result[0] = byte(byteCount)
-	for i, value := range m.holdingRegister[offset : length+offset] {
-		binary.BigEndian.PutUint16(Result[i*2:(i+1)*2], value.Value)
+	Result := make([]byte, byteCount)
+	for i, value := range HoldingRegistersResult {
+		binary.BigEndian.PutUint16(Result[i*2:(i*2)+2], value.Value)
 	}
+	b := make([]byte, 1)
+	b[0] = byte(byteCount)
+	Result = append(b, Result...)
 	return Result, nil
 
 }
@@ -87,21 +88,18 @@ func readInputRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Input Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
-	}
-	if length == 0 {
+	InputRegistersResult, err := m.GetInputRegister(int(offset), int(length))
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 	byteCount := length * 2
-	Result := make([]byte, byteCount+1)
-	Result[0] = byte(byteCount)
-	if offset > length+offset {
-		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	Result := make([]byte, byteCount)
+	for i, value := range InputRegistersResult {
+		binary.BigEndian.PutUint16(Result[i*2:(i*2)+2], value.Value)
 	}
-	for i, value := range m.holdingRegister[offset : length+offset] {
-		binary.BigEndian.PutUint16(Result[(i*2)+1:((i+1)*2)+1], value.Value)
-	}
+	b := make([]byte, 1)
+	b[0] = byte(byteCount)
+	Result = append(b, Result...)
 	return Result, nil
 
 }

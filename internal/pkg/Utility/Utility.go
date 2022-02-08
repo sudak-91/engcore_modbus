@@ -41,9 +41,20 @@ func ConvertLengthfromIntToByteSlice(length int) []byte {
 	return bResult
 }
 
-func CreateDataBlockFromReadCoilStatus(offset, length int) []byte {
+func CreateDataByteSliceForModbusDataFrameToReadFunction(offset, length int) []byte {
 	var bResult []byte
 	bResult = append(bResult, ConvertOffsetFromIntToByteSlice(offset)...)
 	bResult = append(bResult, ConvertLengthfromIntToByteSlice(length)...)
 	return bResult
+}
+
+func ConvertUintSliceToByteSlice(source []uint16) []byte {
+	var result []byte
+	temp := make([]byte, 2)
+	for _, v := range source {
+
+		binary.BigEndian.PutUint16(temp[:2], v)
+		result = append(result, temp...)
+	}
+	return result
 }

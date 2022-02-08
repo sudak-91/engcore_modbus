@@ -70,19 +70,34 @@ func GenerateWriteCoilsRequest() []byte {
 	return frame
 }
 
-func GenerateReadCoilRequest(RegisterCount int) []byte {
+func GenerateReadCoilRequest(RegisterCount, functionalCode int) []byte {
 	var frame []byte
 	_, bresult := GeneratateTransactionIDMock()
 	frame = append(frame, bresult...)
 	frame = append(frame, 0, 0)
-	data := Utility.CreateDataBlockFromReadCoilStatus(0, RegisterCount)
+	data := Utility.CreateDataByteSliceForModbusDataFrameToReadFunction(0, RegisterCount)
 	unitID := GenerateUnitIDMock()
-	funcCode := 1
+	funcCode := functionalCode
 	_, bDatalength := CalcLengthForMockModbusRawData(len(data))
 	frame = append(frame, bDatalength...)
 	frame = append(frame, unitID, byte(funcCode))
 	frame = append(frame, data...)
 	return frame
+}
+
+func GenerateReadRegisters(RegisterCount, functionalCode int) []byte {
+	var frame []byte
+	_, bresult := GeneratateTransactionIDMock()
+	frame = append(frame, bresult...)
+	frame = append(frame, 0, 0)
+	data := Utility.CreateDataByteSliceForModbusDataFrameToReadFunction(0, RegisterCount)
+	unitID := GenerateUnitIDMock()
+	_, bDataLength := CalcLengthForMockModbusRawData(len(data))
+	frame = append(frame, bDataLength...)
+	frame = append(frame, unitID, byte(functionalCode))
+	frame = append(frame, data...)
+	return frame
+
 }
 
 func GenerateWriteRegisterRequest() []byte {
