@@ -17,10 +17,8 @@ func CoilsConverterSliceValueToUint(Value []int) (result []byte, size int) {
 	}
 	result = make([]byte, size)
 	for k, v := range Value {
-		var offset int
-		offset = k
 
-		offset = k % 8
+		offset := k % 8
 
 		if v == 1 {
 			result[k/8] = result[k/8] | byte(1<<offset)

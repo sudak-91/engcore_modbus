@@ -2,6 +2,7 @@ package engcore_modbus
 
 import (
 	"bytes"
+	"encoding/binary"
 	"internal/Mock"
 	"internal/Utility"
 	"testing"
@@ -129,4 +130,108 @@ func TestForceSingleCoil(t *testing.T) {
 		return
 	}
 
+}
+
+func TestPresetSingleRegister(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(10, 10, 10, 10)
+	ModbusBytes := Mock.GenerateWriteSingleRegister(0, 3424)
+	t.Logf("Generator post data: %v\n", ModbusBytes)
+	ModbusFrame, _ := RawDataToModbusRawData(ModbusBytes)
+	t.Logf("ModbusData is: %v\n", ModbusFrame.Data[2])
+	Testrslt, err := presetSingleRegister(ModbusFrame.Data, ModbusRegisters)
+	if err != nil {
+		t.Fatal()
+	}
+	t.Logf("result force single coil is %v", Testrslt)
+	rslt, _ := ModbusRegisters.GetHoldingRegister(0, 1)
+	byteresult := make([]byte, 2)
+	binary.BigEndian.PutUint16(byteresult, rslt[0].Value)
+	if !bytes.Equal(byteresult, Testrslt[2:]) {
+		t.Fail()
+		return
+	}
+
+}
+
+func TestForceMultipalCoil(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(10, 20, 10, 10)
+	ModbusWriteCoilsBytes := Mock.GenerateWriteCoilsRequest(0, 10)
+	t.Logf("Generator post data: %v\n", ModbusWriteCoilsBytes)
+	ModbusFrame, err := RawDataToModbusRawData(ModbusWriteCoilsBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("ModbusData is: %v\n", ModbusFrame)
+	t.Logf("ModbuData \"Data\" field is: %v\n", ModbusFrame.Data)
+
+	Testrslt, err := forseMultipalCoil(ModbusFrame.Data, ModbusRegisters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Force Multipal Coil Result: %v\n", Testrslt)
+	rslt, err := ModbusRegisters.GetCoil(0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var irslt []int
+	for _, v := range rslt {
+		irslt = append(irslt, int(v.Value))
+	}
+	brslt, _ := Utility.CoilsConverterSliceValueToUint(irslt)
+	t.Logf("Modbus result: %v\n", ModbusFrame.Data)
+	t.Logf("Bytes result: %v\n", brslt)
+	ModbusReadCoilsBytes := Mock.GenerateReadCoilRequest(10, 2)
+	t.Logf("MOdbus Read bytes is: %v", ModbusReadCoilsBytes)
+	ModbusReadFrame, _ := RawDataToModbusRawData(ModbusReadCoilsBytes)
+	ReadResult, _ := readCoilStatus(ModbusReadFrame.Data, ModbusRegisters)
+	t.Logf("ReadResult is: %v", ReadResult[1:])
+	if !bytes.Equal(brslt, ReadResult[1:]) {
+		t.Fail()
+		return
+	}
+
+}
+
+func TestPresetMultipalRegister(t *testing.T) {
+	ModbusRegisters, _ := NewModbusRegisters(20, 20, 20, 20)
+	ModbusWriteRegisterButes := Mock.GenerateWriteRegisterRequest(0, 10)
+	t.Logf("Generator post data: %v\n", ModbusWriteRegisterButes)
+	ModbusWriteFrame, err := RawDataToModbusRawData(ModbusWriteRegisterButes)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	t.Logf("Modbus Write frame: %v\n", ModbusWriteFrame)
+	testResult, err := presetMultipalRegister(ModbusWriteFrame.Data, ModbusRegisters)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	t.Logf("Test result is: %v\n", testResult)
+
+	ModbusReadRegisterButes := Mock.GenerateReadRegisters(10, 3)
+	t.Logf("Modbus read registers bytes: %v", ModbusReadRegisterButes)
+	ModbusReadFrame, err := RawDataToModbusRawData(ModbusReadRegisterButes)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	t.Logf("Modbus Read Frame: %v\n", ModbusReadFrame)
+	readtestResult, _ := readHoldingRegisters(ModbusReadFrame.Data, ModbusRegisters)
+	t.Logf("Read test result: %v", readtestResult)
+
+	strResult, _ := ModbusRegisters.GetHoldingRegister(0, 10)
+	var bResult []byte
+	buffer := make([]byte, 2)
+	for _, v := range strResult {
+		binary.BigEndian.PutUint16(buffer, v.Value)
+		bResult = append(bResult, buffer...)
+	}
+	t.Logf("First object: %v\n", readtestResult[1:])
+	t.Logf("Second object: %v\n", bResult)
+	if !bytes.Equal(readtestResult[1:], bResult) {
+		t.Fail()
+		return
+	}
 }

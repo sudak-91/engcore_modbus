@@ -117,11 +117,11 @@ func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	Result := make([]byte, 4)
 	binary.BigEndian.PutUint16(Result[:2], uint16(offset))
 	if data[2] == 0xff {
-		m.coil[offset].Value = 1
+		m.SetCoil(int(offset), []int{1})
 		Result[2] = 0xff
 		Result[3] = 0x00
 	} else if data[2] == 0x00 {
-		m.coil[offset].Value = 0
+		m.SetCoil(int(offset), []int{0})
 		Result[2] = 0x00
 		Result[3] = 0x00
 	} else {
@@ -133,17 +133,17 @@ func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 //Modbus (0x06) presetSingleRegister
 func presetSingleRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write Single Holding Register")
-	var value uint16
 	offset := GetOffset(data)
 	if offset > 65535 {
 		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
 	}
-	value = binary.BigEndian.Uint16(data[2:4])
-
-	m.holdingRegister[offset].Value = value
+	value := make([]uint16, 1)
+	value[0] = binary.BigEndian.Uint16(data[2:4])
+	m.SetHoldingRegister(int(offset), value)
+	variable, _ := m.GetHoldingRegister(int(offset), 1)
 	newvalue := make([]byte, 4)
 	binary.BigEndian.PutUint16(newvalue[:2], uint16(offset))
-	binary.BigEndian.PutUint16(newvalue[2:], m.holdingRegister[offset].Value)
+	binary.BigEndian.PutUint16(newvalue[2:], variable[0].Value)
 	return newvalue, nil
 
 }
@@ -168,10 +168,9 @@ func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	for i = 0; i < bytecount; i++ {
 		for j = 0; j < 8; j++ {
 			bitOffset := ((data[5+i]) >> j) % 2
+			CoilOffset := offset + (i * 8) + j
 			if bitOffset == 1 {
-				m.coil[offset+(i*8)+j].Value = 1
-			} else if bitOffset == 0 {
-				m.coil[offset+(i*8)+j].Value = 0
+				m.SetCoil(int(CoilOffset), []int{1})
 			}
 		}
 	}
@@ -195,8 +194,8 @@ func presetMultipalRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	bytecount := GetByteCount(data)
 	var i uint16
 	for i = 0; i < length; i++ {
-		m.holdingRegister[offset+i].Value = binary.BigEndian.Uint16(data[5+(i*2) : 5+((i+1)*2)])
 
+		m.SetHoldingRegister(int(offset+i), []uint16{binary.BigEndian.Uint16(data[5+(i*2) : 5+((i+1)*2)])})
 	}
 	if i*2 != bytecount {
 		return nil, fmt.Errorf("write error")

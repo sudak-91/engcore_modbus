@@ -54,18 +54,36 @@ func GenerateUnitIDMock() (UnitID byte) {
 	return
 }
 
-func GenerateWriteCoilsRequest() []byte {
+/*Generate ModbusTCP command for write manu coils
+ */
+func GenerateWriteCoilsRequest(offset int, length int) []byte {
 	var frame []byte
-	_, bresult := GeneratateTransactionIDMock()
-	frame = append(frame, bresult...)
+	functCode := 0x0F //Write coils
+
+	_, bTransactionID := GeneratateTransactionIDMock()
+	frame = append(frame, bTransactionID...)
+	//Add to frame protocol identify 0x00 0x00
 	frame = append(frame, 0, 0)
-	data := GenerateCoilMockValues(17)
-	unitId := GenerateUnitIDMock()
+
+	bOffset := make([]byte, 2)
+	binary.BigEndian.PutUint16(bOffset, uint16(offset))
+
+	bRegistersCount := make([]byte, 2)
+	binary.BigEndian.PutUint16(bRegistersCount, uint16(length))
+
+	data := GenerateCoilMockValues(length)
 	bdata, coildatasize := Utility.CoilsConverterSliceValueToUint(data)
-	functCode := 15 //Write coils
-	_, bDataLength := CalcLengthForMockModbusRawData(coildatasize)
+
+	unitId := GenerateUnitIDMock()
+
+	_, bDataLength := CalcLengthForMockModbusRawData(coildatasize + 5)
+
 	frame = append(frame, bDataLength...)
 	frame = append(frame, unitId, byte(functCode))
+
+	frame = append(frame, bOffset...)
+	frame = append(frame, bRegistersCount...)
+	frame = append(frame, byte(coildatasize))
 	frame = append(frame, bdata...)
 	return frame
 }
@@ -85,6 +103,24 @@ func GenerateWriteSingleCoil(offset int, value int) []byte {
 	binary.BigEndian.PutUint16(boffset, uint16(offset))
 	frame = append(frame, boffset...)
 	frame = append(frame, data...)
+	return frame
+}
+
+func GenerateWriteSingleRegister(offset int, maxvalue int) []byte {
+	var frame []byte
+	_, bresult := GeneratateTransactionIDMock()
+	frame = append(frame, bresult...)
+	frame = append(frame, 0, 0)
+	_, bDataRegister := GenerateRegistersMock(1, maxvalue)
+	unitId := GenerateUnitIDMock()
+	funcCode := 6
+	_, bDataLength := CalcLengthForMockModbusRawData(len(bDataRegister) + 2)
+	frame = append(frame, bDataLength...)
+	frame = append(frame, unitId, byte(funcCode))
+	boffset := make([]byte, 2)
+	binary.BigEndian.PutUint16(boffset, uint16(offset))
+	frame = append(frame, boffset...)
+	frame = append(frame, bDataRegister...)
 	return frame
 }
 
@@ -118,17 +154,27 @@ func GenerateReadRegisters(RegisterCount, functionalCode int) []byte {
 
 }
 
-func GenerateWriteRegisterRequest() []byte {
+func GenerateWriteRegisterRequest(offset int, registersCount int) []byte {
 	var frame []byte
-	_, bresult := GeneratateTransactionIDMock()
-	frame = append(frame, bresult...)
+	_, bTransactionID := GeneratateTransactionIDMock()
+	frame = append(frame, bTransactionID...)
 	frame = append(frame, 0, 0)
-	_, data := GenerateRegistersMock(14, 2568)
+
+	_, data := GenerateRegistersMock(registersCount, 2568)
 	unitId := GenerateUnitIDMock()
 	funcCode := 16 //force Multipal registers
-	_, bDatalength := CalcLengthForMockModbusRawData(len(data))
+
+	bOffset := make([]byte, 2)
+	binary.BigEndian.PutUint16(bOffset, uint16(offset))
+	bRegisterCount := make([]byte, 2)
+	binary.BigEndian.PutUint16(bRegisterCount, uint16(registersCount))
+
+	_, bDatalength := CalcLengthForMockModbusRawData(len(data) + 5)
 	frame = append(frame, bDatalength...)
 	frame = append(frame, unitId, byte(funcCode))
+	frame = append(frame, bOffset...)
+	frame = append(frame, bRegisterCount...)
+	frame = append(frame, byte(len(data)))
 	frame = append(frame, data...)
 	return frame
 }

@@ -47,7 +47,7 @@ func TestRawDataToModbusRawData(t *testing.T) {
 
 }
 func TestModbusFrametoBytesSlice(t *testing.T) {
-	data := Mock.GenerateWriteRegisterRequest()
+	data := Mock.GenerateWriteRegisterRequest(0, 10)
 	ModbusStruct, _ := RawDataToModbusRawData(data)
 	bdata, _ := ModbusStruct.ModbusFrametoByteSlice()
 	if !bytes.Equal(data, bdata) {
