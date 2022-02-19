@@ -1,6 +1,8 @@
 package engcore_modbus
 
 import (
+	"bytes"
+	"internal/Mock"
 	"testing"
 )
 
@@ -42,5 +44,16 @@ func TestRawDataToModbusRawData(t *testing.T) {
 
 	t.Log(testresult.Data)
 	t.Log(rslt.Data)
+
+}
+func TestModbusFrametoBytesSlice(t *testing.T) {
+	data := Mock.GenerateWriteRegisterRequest(0, 10)
+	ModbusStruct, _ := RawDataToModbusRawData(data)
+	bdata, _ := ModbusStruct.ModbusFrametoByteSlice()
+	if !bytes.Equal(data, bdata) {
+		t.Fatal()
+
+	}
+	t.Log("test is good")
 
 }

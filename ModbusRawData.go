@@ -3,6 +3,7 @@ package engcore_modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 )
 
 type ModbusRawData struct {
@@ -14,17 +15,22 @@ type ModbusRawData struct {
 	Data           []byte //DATA
 }
 
-func RawDataToModbusRawData(data []byte) (*ModbusRawData, error) {
-	frame := &ModbusRawData{
-		TransactionID:  binary.BigEndian.Uint16(data[0:2]),
-		ProtocolID:     binary.BigEndian.Uint16(data[2:4]),
-		Length:         binary.BigEndian.Uint16(data[4:6]),
-		UnitID:         data[6],
-		FunctionalCode: data[7],
-		Data:           data[8:],
+func RawDataToModbusRawData(data []byte) (ModbusRawData, error) {
+	var frame ModbusRawData
+	if len(data) < 8 {
+		return frame, fmt.Errorf("length error\n")
 	}
+
+	frame.TransactionID = binary.BigEndian.Uint16(data[0:2])
+	frame.ProtocolID = binary.BigEndian.Uint16(data[2:4])
+	frame.Length = binary.BigEndian.Uint16(data[4:6])
+	frame.UnitID = data[6]
+	frame.FunctionalCode = data[7]
+	frame.Data = data[8:]
+
+	log.Printf("modbus frame is: %v\n", frame)
 	if int(frame.Length) != len(frame.Data)+2 {
-		return nil, fmt.Errorf("error ModbusTCP frame length")
+		return frame, fmt.Errorf("error ModbusTCP frame length")
 	}
 	return frame, nil
 }

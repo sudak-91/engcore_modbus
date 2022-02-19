@@ -6,36 +6,30 @@ import (
 	"log"
 )
 
-//Return: data, error
-//Mosbuc Command 0x01
+//Modbuc Command 0x01
 func readCoilStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Coil")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > uint16(len(m.coil)) {
+	CoilResult, err := m.GetCoil(int(offset), int(length)) // slice for length and result
+	if err != nil {
 
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
+		return []byte{ILLEGAL_DATA_ADDRESS}, err
 	}
-	if length == 0 {
-		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
-	}
-
 	resultLength := length / 8
 	if resultLength%8 != 0 {
 		resultLength++
 	}
-	Result := make([]byte, resultLength+1) // slice for length and result
+	Result := make([]byte, resultLength+1)
 	Result[0] = byte(resultLength)
 
-	for k, value := range m.coil[offset : offset+length] {
+	for k, value := range CoilResult {
 		if value.Value != 0 {
 			shift := uint(k) % 8
-			Result[1+k/8] = byte(1 << shift)
+			Result[1+k/8] = Result[1+k/8] | byte(1<<shift)
 		}
-
 	}
 	return Result, nil
-
 }
 
 //Modbus 0x02
@@ -43,12 +37,11 @@ func readInputStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Input Status")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register is 65535")
-	}
-	if length == 0 {
+	InputResult, err := m.GetDiscreteInput(int(offset), int(length))
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
+
 	resultLength := length / 8
 	if resultLength%8 != 0 {
 		resultLength++
@@ -56,10 +49,10 @@ func readInputStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	Result := make([]byte, resultLength+1) // slice for length and result
 	Result[0] = byte(resultLength)
 
-	for k, value := range m.inputRegister[offset : offset+length] {
+	for k, value := range InputResult {
 		if value.Value != 0 {
 			shift := uint(k) % 8
-			Result[1+k/8] = byte(1 << shift)
+			Result[1+k/8] = Result[1+k/8] | byte(1<<shift)
 		}
 
 	}
@@ -72,18 +65,20 @@ func readHoldingRegisters(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Holding Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
-	}
-	if length == 0 {
+	HoldingRegistersResult, err := m.GetHoldingRegister(int(offset), int(length))
+
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
+
 	byteCount := length * 2
-	Result := make([]byte, byteCount+1)
-	Result[0] = byte(byteCount)
-	for i, value := range m.holdingRegister[offset : length+offset] {
-		binary.BigEndian.PutUint16(Result[i*2:(i+1)*2], value.Value)
+	Result := make([]byte, byteCount)
+	for i, value := range HoldingRegistersResult {
+		binary.BigEndian.PutUint16(Result[i*2:(i*2)+2], value.Value)
 	}
+	b := make([]byte, 1)
+	b[0] = byte(byteCount)
+	Result = append(b, Result...)
 	return Result, nil
 
 }
@@ -93,21 +88,18 @@ func readInputRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Input Register")
 	offset := GetOffset(data)
 	length := GetLength(data)
-	if offset+length > 65535 {
-		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
-	}
-	if length == 0 {
+	InputRegistersResult, err := m.GetInputRegister(int(offset), int(length))
+	if err != nil {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 	byteCount := length * 2
-	Result := make([]byte, byteCount+1)
-	Result[0] = byte(byteCount)
-	if offset > length+offset {
-		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
+	Result := make([]byte, byteCount)
+	for i, value := range InputRegistersResult {
+		binary.BigEndian.PutUint16(Result[i*2:(i*2)+2], value.Value)
 	}
-	for i, value := range m.holdingRegister[offset : length+offset] {
-		binary.BigEndian.PutUint16(Result[(i*2)+1:((i+1)*2)+1], value.Value)
-	}
+	b := make([]byte, 1)
+	b[0] = byte(byteCount)
+	Result = append(b, Result...)
 	return Result, nil
 
 }
@@ -124,12 +116,12 @@ func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	}
 	Result := make([]byte, 4)
 	binary.BigEndian.PutUint16(Result[:2], uint16(offset))
-	if data[0] == 0xff {
-		m.coil[offset].Value = 1
+	if data[2] == 0xff {
+		m.SetCoil(int(offset), []int{1})
 		Result[2] = 0xff
 		Result[3] = 0x00
-	} else if data[0] == 0x00 {
-		m.coil[offset].Value = 0
+	} else if data[2] == 0x00 {
+		m.SetCoil(int(offset), []int{0})
 		Result[2] = 0x00
 		Result[3] = 0x00
 	} else {
@@ -141,25 +133,22 @@ func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 //Modbus (0x06) presetSingleRegister
 func presetSingleRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write Single Holding Register")
-	var value uint16
 	offset := GetOffset(data)
 	if offset > 65535 {
 		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
 	}
-	value = binary.BigEndian.Uint16(data[2:4])
-
-	m.holdingRegister[offset].Value = value
+	value := make([]uint16, 1)
+	value[0] = binary.BigEndian.Uint16(data[2:4])
+	m.SetHoldingRegister(int(offset), value)
+	variable, _ := m.GetHoldingRegister(int(offset), 1)
 	newvalue := make([]byte, 4)
 	binary.BigEndian.PutUint16(newvalue[:2], uint16(offset))
-	binary.BigEndian.PutUint16(newvalue[2:], m.holdingRegister[offset].Value)
+	binary.BigEndian.PutUint16(newvalue[2:], variable[0].Value)
 	return newvalue, nil
 
 }
 
 //Modbus (0x0F)(15) ForseMultipalCoil
-/*
-
- */
 
 func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write MultiCoil")
@@ -179,10 +168,9 @@ func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	for i = 0; i < bytecount; i++ {
 		for j = 0; j < 8; j++ {
 			bitOffset := ((data[5+i]) >> j) % 2
+			CoilOffset := offset + (i * 8) + j
 			if bitOffset == 1 {
-				m.coil[offset+(i*8)+j].Value = 1
-			} else if bitOffset == 0 {
-				m.coil[offset+(i*8)+j].Value = 0
+				m.SetCoil(int(CoilOffset), []int{1})
 			}
 		}
 	}
@@ -203,15 +191,10 @@ func presetMultipalRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	if length == 0 {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
-	bytecount := GetByteCount(data)
-	var i uint16
-	for i = 0; i < length; i++ {
-		m.holdingRegister[offset+i].Value = binary.BigEndian.Uint16(data[5+(i*2) : 5+((i+1)*2)])
 
-	}
-	if i*2 != bytecount {
-		return nil, fmt.Errorf("write error")
-	}
+	convertresult := ByteSliceToUintSlise(data[5:])
+	log.Printf("covert result is: %v", convertresult)
+	m.SetHoldingRegister(int(offset), convertresult)
 	result := make([]byte, 4)
 	binary.BigEndian.PutUint16(result[:2], offset)
 	binary.BigEndian.PutUint16(result[2:], length)
