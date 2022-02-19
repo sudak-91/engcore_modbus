@@ -76,12 +76,11 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 		length, err := conn.Read(buffer)
 		if err != nil {
 			fmt.Errorf("%v reading error %v", conn.RemoteAddr(), err.Error())
-			break
+			continue
 		}
 		log.Printf("message length is: %v\n", length)
-		buffer = buffer[:length]
-		log.Println(buffer)
-		frame, err := RawDataToModbusRawData(buffer)
+		bufferData := buffer[:length]
+		frame, err := RawDataToModbusRawData(bufferData)
 		if err != nil {
 			log.Println(err.Error())
 			continue
@@ -89,7 +88,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 		fmt.Printf("Request frame:%v", frame)
 
 		if frame.FunctionalCode > 17 {
-			result, err := errorResponce(frame)
+			result, err := errorResponce(&frame)
 
 			if err != nil {
 				log.Println(err.Error())
@@ -103,7 +102,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			}
 			continue
 		}
-		log.Printf("functional code is: %v, %v", frame.FunctionalCode)
+		log.Printf("functional code is: %v", frame.FunctionalCode)
 		result, err := m.action[frame.FunctionalCode](frame.Data, m.mbMap)
 		log.Println("Result:", result)
 		//Unlock
@@ -112,7 +111,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			frame.FunctionalCode = frame.FunctionalCode + 128
 		}
 
-		responceframe, err := createResponce(frame, result)
+		responceframe, err := createResponce(&frame, result)
 		log.Println("Responce Frame:", responceframe)
 		butesresult, err := responceframe.ModbusFrametoByteSlice()
 

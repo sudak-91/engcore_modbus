@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	mbMap, err := engcore_modbus.NewModbusRegisters(20, 20, 20, 20)
+	mbMap, err := engcore_modbus.NewModbusRegisters()
 	if err != nil {
 		panic(err)
 	}

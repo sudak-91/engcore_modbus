@@ -3,6 +3,7 @@ package engcore_modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 )
 
 //First register offset
@@ -37,10 +38,13 @@ func ValidateSetNameData(offset int, name string) error {
 //data []byte - is modbus data without offset and length
 func ByteSliceToUintSlise(data []byte) []uint16 {
 	var result []uint16
+	log.Printf("ByteSliceToUintSlice function get data: %v", data)
 	for i := 0; i < len(data); i += 2 {
+		log.Println(i)
 		temp := make([]uint16, 1)
-		binary.BigEndian.PutUint16(data[i:i+2], temp[0])
-		result = append(result, temp...)
+		temp[0] = binary.BigEndian.Uint16(data[i : i+2])
+		log.Printf("converted data is: %v", temp[0])
+		result = append(result, temp[0])
 	}
 	return result
 }
