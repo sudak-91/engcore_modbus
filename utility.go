@@ -33,3 +33,14 @@ func ValidateSetNameData(offset int, name string) error {
 	}
 	return nil
 }
+
+//data []byte - is modbus data without offset and length
+func ByteSliceToUintSlise(data []byte) []uint16 {
+	var result []uint16
+	for i := 0; i < len(data); i += 2 {
+		temp := make([]uint16, 1)
+		binary.BigEndian.PutUint16(data[i:i+2], temp[0])
+		result = append(result, temp...)
+	}
+	return result
+}

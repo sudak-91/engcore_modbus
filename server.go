@@ -14,7 +14,9 @@ type ModbusServer struct {
 }
 
 func NewModbusServer(ip string, port int, mMap *ModbusRegisters) *ModbusServer {
+
 	m := &ModbusServer{}
+	log.Println("create new modbus server instance")
 	ipV4Adr, _, netparserr := net.ParseCIDR(ip)
 	if netparserr != nil {
 		log.Fatalln("invalid ip adress")
@@ -30,6 +32,7 @@ func NewModbusServer(ip string, port int, mMap *ModbusRegisters) *ModbusServer {
 	m.action[6] = presetSingleRegister
 	m.action[15] = forseMultipalCoil
 	m.action[16] = presetMultipalRegister
+	log.Println("add modbus function to action list")
 	return m
 }
 
@@ -43,17 +46,16 @@ func (m *ModbusServer) StartServer() {
 	if err != nil {
 		log.Println(err.Error())
 	}
-	fmt.Println("server start", ls.Addr())
+	log.Printf("server was started. %v", ls.Addr())
 
 	for {
-
-		fmt.Println("Default")
 		conn, err := ls.Accept()
 		if err != nil {
-			log.Panic(err.Error())
+			fmt.Errorf("%v\n", err.Error())
 		}
 
 		//Client
+
 		go m.handlerClient(conn)
 
 	}
@@ -61,17 +63,22 @@ func (m *ModbusServer) StartServer() {
 }
 
 func (m *ModbusServer) handlerClient(conn net.Conn) {
-	defer conn.Close()
+	defer func() {
+		log.Printf("Connection was closed")
+		conn.Close()
+		recover()
+	}()
 
-	fmt.Println(conn.RemoteAddr())
-	buffer := make([]byte, 512)
+	log.Printf("Connected: %v", conn.RemoteAddr())
+	buffer := make([]byte, 2048)
 
 	for {
 		length, err := conn.Read(buffer)
 		if err != nil {
+			fmt.Errorf("%v reading error %v", conn.RemoteAddr(), err.Error())
 			break
 		}
-
+		log.Printf("message length is: %v\n", length)
 		buffer = buffer[:length]
 		log.Println(buffer)
 		frame, err := RawDataToModbusRawData(buffer)
@@ -79,7 +86,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			log.Println(err.Error())
 			continue
 		}
-		fmt.Println("Request frame:", *frame)
+		fmt.Printf("Request frame:%v", frame)
 
 		if frame.FunctionalCode > 17 {
 			result, err := errorResponce(frame)
@@ -96,7 +103,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			}
 			continue
 		}
-		//@TODO add mutex
+		log.Printf("functional code is: %v, %v", frame.FunctionalCode)
 		result, err := m.action[frame.FunctionalCode](frame.Data, m.mbMap)
 		log.Println("Result:", result)
 		//Unlock

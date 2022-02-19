@@ -191,15 +191,8 @@ func presetMultipalRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	if length == 0 {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
-	bytecount := GetByteCount(data)
-	var i uint16
-	for i = 0; i < length; i++ {
-
-		m.SetHoldingRegister(int(offset+i), []uint16{binary.BigEndian.Uint16(data[5+(i*2) : 5+((i+1)*2)])})
-	}
-	if i*2 != bytecount {
-		return nil, fmt.Errorf("write error")
-	}
+	convertresult := ByteSliceToUintSlise(data[5:])
+	m.SetHoldingRegister(int(offset), convertresult)
 	result := make([]byte, 4)
 	binary.BigEndian.PutUint16(result[:2], offset)
 	binary.BigEndian.PutUint16(result[2:], length)

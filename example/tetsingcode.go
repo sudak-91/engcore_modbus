@@ -8,9 +8,9 @@ import (
 )
 
 func main() {
-	frame := Mock.GenerateWriteCoilsRequest()
+	frame := Mock.GenerateWriteCoilsRequest(0, 10)
 	fmt.Println(frame)
-	frame2 := Mock.GenerateWriteRegisterRequest()
+	frame2 := Mock.GenerateWriteRegisterRequest(0, 10)
 	fmt.Println(frame2)
 	k, _ := engcore_modbus.RawDataToModbusRawData(frame2)
 	fmt.Println(k.TransactionID)
