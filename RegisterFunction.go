@@ -9,18 +9,20 @@ import (
 //Modbuc Command 0x01
 func readCoilStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Read Coil")
+	log.Printf("read coil data is: %v", data)
 	offset := GetOffset(data)
 	length := GetLength(data)
 	CoilResult, err := m.GetCoil(int(offset), int(length)) // slice for length and result
 	if err != nil {
-
+		log.Fatal("ERRROR")
 		return []byte{ILLEGAL_DATA_ADDRESS}, err
 	}
-	resultLength := length / 8
-	if resultLength%8 != 0 {
-		resultLength++
+	resultLength := len(CoilResult) / 8
+	if len(CoilResult)%8 != 0 {
+		resultLength += 1
 	}
 	Result := make([]byte, resultLength+1)
+	log.Printf("Result length is: %v", len(Result))
 	Result[0] = byte(resultLength)
 
 	for k, value := range CoilResult {
@@ -29,6 +31,7 @@ func readCoilStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 			Result[1+k/8] = Result[1+k/8] | byte(1<<shift)
 		}
 	}
+	log.Printf("Result coil read is: %v", Result)
 	return Result, nil
 }
 
@@ -42,8 +45,8 @@ func readInputStatus(data []byte, m *ModbusRegisters) ([]byte, error) {
 		return []byte{ILLEGAL_DATA_VALUE}, fmt.Errorf("illegal data length")
 	}
 
-	resultLength := length / 8
-	if resultLength%8 != 0 {
+	resultLength := len(InputResult) / 8
+	if len(InputResult)%8 != 0 {
 		resultLength++
 	}
 	Result := make([]byte, resultLength+1) // slice for length and result
@@ -97,6 +100,7 @@ func readInputRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 	for i, value := range InputRegistersResult {
 		binary.BigEndian.PutUint16(Result[i*2:(i*2)+2], value.Value)
 	}
+
 	b := make([]byte, 1)
 	b[0] = byte(byteCount)
 	Result = append(b, Result...)
@@ -107,6 +111,7 @@ func readInputRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 //Modbus (0x05) ForceSingleCoil
 func forseSingleCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write Single Coil")
+	log.Printf("write single coil data is: %v", data)
 	offset := GetOffset(data)
 	if offset > 65535 {
 		return []byte{ILLEGAL_DATA_ADDRESS}, fmt.Errorf("max register  is 65535")
@@ -152,6 +157,7 @@ func presetSingleRegister(data []byte, m *ModbusRegisters) ([]byte, error) {
 
 func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 	log.Println("Write MultiCoil")
+	log.Printf("request data is: %v", data)
 	offset := GetOffset(data)
 	length := GetLength(data)
 	if offset+length > 65535 {
@@ -175,6 +181,7 @@ func forseMultipalCoil(data []byte, m *ModbusRegisters) ([]byte, error) {
 		}
 	}
 	result := make([]byte, 4)
+	log.Printf("result after function: %v", result)
 	binary.BigEndian.PutUint16(result[0:2], offset)
 	binary.BigEndian.PutUint16(result[2:4], length)
 	return result, nil

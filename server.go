@@ -121,6 +121,7 @@ func (m *ModbusServer) handlerClient(conn net.Conn) {
 			fmt.Errorf(WriteError.Error())
 			continue
 		}
+
 		if lenRcv == 0 {
 			log.Default().Output(0, "Wweeeeee")
 
